@@ -121,7 +121,7 @@ class CanvasImageResize
     protected function initPluginPage()
     {
         add_action('plugins_loaded', array($this, 'addTextDomain'));
-        add_action('admin_init', array($this, 'initOptionsPage'));
+        add_action('admin_init', array($this, 'initAdmin'));
         add_action('admin_menu', array($this, 'addOptionsPage'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'addPluginPage'));
     }
@@ -189,11 +189,11 @@ class CanvasImageResize
     }
 
     /**
-     * Render the options page
+     * Register the options and additional script
      *
      * @return void
      */
-    public function initOptionsPage()
+    public function initAdmin()
     {
         // add the possibility to add settings
         register_setting(static::OPTIONS_PAGE_NAME, $this->getOptionsName());
@@ -231,6 +231,10 @@ class CanvasImageResize
             static::OPTIONS_PAGE_NAME,
             $sectionName
         );
+
+        // Add additional script which resizes images before checking
+        // the image size
+        wp_enqueue_script('plupload-additional', plugin_dir_url( __FILE__ ) . 'script.js', array('plupload'), null, true);
     }
 
     /**
