@@ -3,14 +3,17 @@
 /*
 Plugin Name: Canvas Image Resize
 Description: Re-sizes images right inside the browser BEFORE uploading them.
-Version: 1.0.0
+Version: 1.0.1
 Author: Simon Sippert
 Author URI: http://www.sippsolutions.de/
+Text Domain: canvas-image-resize
+Domain Path: /lang
+License: GNU
 */
 
 /*
 Canvas Image Resize, a plugin for WordPress
-Copyright (C) 2016 Simon Sippert, sippsolutions (http://www.sippsolutions.de)
+Copyright (C) 2017 Simon Sippert, sippsolutions (http://www.sippsolutions.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,224 +30,300 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /**
- * Canvas Image Resize Main Class
+ * Canvas Image Resize
  *
- * @copyright 2016 Simon Sippert <s.sippert@sippsolutions.de>
+ * @copyright 2017 Simon Sippert <s.sippert@sippsolutions.de>
  */
-class Canvas_Image_Resize
+class CanvasImageResize
 {
     /**
-     * Defines the plugin name
+     * Define the plugin name
      *
-     * @type string
+     * @var string
      */
     const PLUGIN_NAME = 'Canvas Image Resize';
 
     /**
      * Defines the text domain
      *
-     * @type string
+     * @var string
      */
     const TEXT_DOMAIN = 'canvas-image-resize';
 
     /**
      * Defines the plugin's options page name
      *
-     * @type string
+     * @var string
      */
     const OPTIONS_PAGE_NAME = 'cir_options';
 
     /**
      * Field name for max width
      *
-     * @type string
+     * @var string
      */
     const FIELD_IMAGE_MAX_WIDTH = 'image_max_width';
 
     /**
      * Field name for max height
      *
-     * @type string
+     * @var string
      */
     const FIELD_IMAGE_MAX_HEIGHT = 'image_max_height';
 
     /**
      * Field name for max quality
      *
-     * @type string
+     * @var string
      */
     const FIELD_IMAGE_MAX_QUALITY = 'image_max_quality';
 
     /**
-     * Stores default options
+     * Store default options
      *
      * @var array
      */
-    protected $_defaultOptions = array(
+    protected $defaultOptions = array(
         self::FIELD_IMAGE_MAX_WIDTH => 1600,
         self::FIELD_IMAGE_MAX_HEIGHT => 1600,
         self::FIELD_IMAGE_MAX_QUALITY => 100,
     );
 
     /**
-     * Initializes the plugin
+     * Initialize the plugin
      */
-    public function __construct() {
-        $this->_initFilterSettings();
-        $this->_initPluginPage();
+    public function __construct()
+    {
+        $this->initPlugin();
+        $this->initPluginPage();
     }
 
     /**
-     * Initializes the filter settings
+     * Initialize the filter settings
+     *
+     * @return void
      */
-    protected function _initFilterSettings() {
-        add_filter('plupload_default_settings', array($this, 'setImageSettings'), 100);
-        add_filter('plupload_default_params', array($this, 'setImageSettings'), 100);
-        add_filter('plupload_init', array($this, 'setImageSettings'), 100);
+    protected function initPlugin()
+    {
+        // define function
+        $setImageSettingsFunction = 'setImageSettings';
+        // add filters
+        add_filter('plupload_default_settings', array($this, $setImageSettingsFunction), 100);
+        add_filter('plupload_default_params', array($this, $setImageSettingsFunction), 100);
+        add_filter('plupload_init', array($this, $setImageSettingsFunction), 100);
     }
 
     /**
-     * Initializes the plugin page
+     * Initialize the plugin page
+     *
+     * @return void
      */
-    protected function _initPluginPage() {
+    protected function initPluginPage()
+    {
+        add_action('plugins_loaded', array($this, 'addTextDomain'));
         add_action('admin_init', array($this, 'initOptionsPage'));
         add_action('admin_menu', array($this, 'addOptionsPage'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'addPluginPage'));
     }
 
     /**
-     * Adds the plugin page
+     * Add text domain
+     *
+     * @return void
+     */
+    public function addTextDomain()
+    {
+        load_plugin_textdomain(static::TEXT_DOMAIN, false, dirname(plugin_basename(__FILE__)) . '/lang');
+    }
+
+    /**
+     * Get plugin name
+     *
+     * @return string
+     */
+    protected function getPluginName()
+    {
+        return __(static::PLUGIN_NAME, static::TEXT_DOMAIN);
+    }
+
+    /**
+     * Get options name
+     *
+     * @return string
+     */
+    protected function getOptionsName()
+    {
+        return static::TEXT_DOMAIN . '_settings';
+    }
+
+    /**
+     * Get options
+     *
+     * @return array
+     */
+    protected function getOptions()
+    {
+        return wp_parse_args(get_option($this->getOptionsName()), $this->defaultOptions);
+    }
+
+    /**
+     * Add the plugin page
      *
      * @param array $links
      * @return array
      */
-    public function addPluginPage(array $links) {
-        array_unshift($links, '<a href="options-general.php?page=' . self::TEXT_DOMAIN . '">' . __('Settings') . '</a>');
+    public function addPluginPage(array $links)
+    {
+        array_unshift($links, '<a href="options-general.php?page=' . static::TEXT_DOMAIN . '">' . __('Settings', static::TEXT_DOMAIN) . '</a>');
         return $links;
     }
 
     /**
-     * Adds the options page
+     * Add the options page
+     *
+     * @return void
      */
-    public function addOptionsPage() {
-        add_options_page(self::PLUGIN_NAME, self::PLUGIN_NAME, 'manage_options', self::TEXT_DOMAIN, array($this, 'renderOptionsPage'));
+    public function addOptionsPage()
+    {
+        add_options_page($this->getPluginName(), $this->getPluginName(), 'manage_options', static::TEXT_DOMAIN, array($this, 'renderOptionsPage'));
     }
 
     /**
-     * Renders the options page
+     * Render the options page
+     *
+     * @return void
      */
-    public function initOptionsPage() {
+    public function initOptionsPage()
+    {
         // add the possibility to add settings
-        register_setting(self::OPTIONS_PAGE_NAME, self::TEXT_DOMAIN . '_settings');
+        register_setting(static::OPTIONS_PAGE_NAME, $this->getOptionsName());
 
         // set section name
-        $sectionName = implode('_', array(self::TEXT_DOMAIN, self::OPTIONS_PAGE_NAME, 'general'));
+        $sectionName = implode('_', array(static::TEXT_DOMAIN, static::OPTIONS_PAGE_NAME, 'general'));
 
         // add section
         add_settings_section(
             $sectionName,
-            __('General settings'),
+            __('General settings', static::TEXT_DOMAIN),
             null,
-            self::OPTIONS_PAGE_NAME
+            static::OPTIONS_PAGE_NAME
         );
 
         // add fields
         add_settings_field(
-            self::FIELD_IMAGE_MAX_WIDTH,
-            __('Maximum width of images'),
+            static::FIELD_IMAGE_MAX_WIDTH,
+            __('Maximum width of images', static::TEXT_DOMAIN),
             array($this, 'renderFieldGeneralImageMaxWidth'),
-            self::OPTIONS_PAGE_NAME,
+            static::OPTIONS_PAGE_NAME,
             $sectionName
         );
         add_settings_field(
-            self::FIELD_IMAGE_MAX_HEIGHT,
-            __('Maximum height of images'),
+            static::FIELD_IMAGE_MAX_HEIGHT,
+            __('Maximum height of images', static::TEXT_DOMAIN),
             array($this, 'renderFieldGeneralImageMaxHeight'),
-            self::OPTIONS_PAGE_NAME,
+            static::OPTIONS_PAGE_NAME,
             $sectionName
         );
         add_settings_field(
-            self::FIELD_IMAGE_MAX_QUALITY,
-            __('Quality of images (0-100)'),
+            static::FIELD_IMAGE_MAX_QUALITY,
+            __('Quality of images (0-100)', static::TEXT_DOMAIN),
             array($this, 'renderFieldGeneralImageMaxQuality'),
-            self::OPTIONS_PAGE_NAME,
+            static::OPTIONS_PAGE_NAME,
             $sectionName
         );
     }
 
     /**
-     * Renders the options page
+     * Render the options page
+     *
+     * @return void
      */
-    public function renderOptionsPage() {
+    public function renderOptionsPage()
+    {
         ?>
         <form action='options.php' method='post'>
-            <h1><?php echo self::PLUGIN_NAME; ?></h1>
+            <h1><?php echo $this->getPluginName(); ?></h1>
 
-            <p><?php echo _('Below you can configure which maximum dimensions images uploaded to your site should have.'); ?></p>
+            <p><?php echo __('Below you can configure which maximum dimensions images uploaded to your site should have.', static::TEXT_DOMAIN); ?></p>
             <?php
-            settings_fields(self::OPTIONS_PAGE_NAME);
-            do_settings_sections(self::OPTIONS_PAGE_NAME);
+            settings_fields(static::OPTIONS_PAGE_NAME);
+            do_settings_sections(static::OPTIONS_PAGE_NAME);
             submit_button();
             ?>
         </form>
-    <?php
+        <?php
     }
 
     /**
-     * Renders a field
+     * Render a field
      *
      * @param string $name
      * @param string [$type]
+     *
+     * @return void
      */
-    protected function _renderField($name, $type = 'number') {
-        $options = wp_parse_args(get_option(self::TEXT_DOMAIN . '_settings'), $this->_defaultOptions);
+    protected function renderField($name, $type = 'number')
+    {
+        $options = $this->getOptions();
         ?>
-        <input type='<?php echo $type; ?>' name='<?php echo self::TEXT_DOMAIN . '_settings'; ?>[<?php echo $name; ?>]'
+        <input type='<?php echo $type; ?>'
+               title='<?php echo $name; ?>'
+               name='<?php echo $this->getOptionsName(); ?>[<?php echo $name; ?>]'
                value='<?php echo $type == 'number' ? abs((int)$options[$name]) : $options[$name]; ?>'>
-    <?php
+        <?php
     }
 
     /**
-     * Renders a specific field
+     * Render a specific field
+     *
+     * @return void
      */
-    public function renderFieldGeneralImageMaxWidth() {
-        $this->_renderField(self::FIELD_IMAGE_MAX_WIDTH);
+    public function renderFieldGeneralImageMaxWidth()
+    {
+        $this->renderField(static::FIELD_IMAGE_MAX_WIDTH);
     }
 
     /**
-     * Renders a specific field
+     * Render a specific field
+     *
+     * @return void
      */
-    public function renderFieldGeneralImageMaxHeight() {
-        $this->_renderField(self::FIELD_IMAGE_MAX_HEIGHT);
+    public function renderFieldGeneralImageMaxHeight()
+    {
+        $this->renderField(static::FIELD_IMAGE_MAX_HEIGHT);
     }
 
     /**
-     * Renders a specific field
+     * Render a specific field
+     *
+     * @return void
      */
-    public function renderFieldGeneralImageMaxQuality() {
-        $this->_renderField(self::FIELD_IMAGE_MAX_QUALITY);
+    public function renderFieldGeneralImageMaxQuality()
+    {
+        $this->renderField(static::FIELD_IMAGE_MAX_QUALITY);
     }
 
     /**
-     * Sets image re-sizing settings
+     * Set image re-sizing settings
      * [Does all the magic :3]
      *
      * @param array $defaults
      * @return array
      */
-    public function setImageSettings(array $defaults) {
+    public function setImageSettings(array $defaults)
+    {
         // get options
-        $options = wp_parse_args(get_option(self::TEXT_DOMAIN . '_settings'), $this->_defaultOptions);
+        $options = $this->getOptions();
 
         // set values
         $defaults['resize'] = array(
-            'width' => abs((int)$options[self::FIELD_IMAGE_MAX_WIDTH]),
-            'height' => abs((int)$options[self::FIELD_IMAGE_MAX_HEIGHT]),
-            'quality' => abs((int)$options[self::FIELD_IMAGE_MAX_QUALITY]),
+            'width' => abs((int)$options[static::FIELD_IMAGE_MAX_WIDTH]),
+            'height' => abs((int)$options[static::FIELD_IMAGE_MAX_HEIGHT]),
+            'quality' => abs((int)$options[static::FIELD_IMAGE_MAX_QUALITY]),
         );
         return $defaults;
     }
 }
 
 // init
-new Canvas_Image_Resize();
+new CanvasImageResize();
