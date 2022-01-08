@@ -2,13 +2,15 @@
 
 /*
 Plugin Name: Canvas Image Resize
+Plugin URI:  https://de.wordpress.org/plugins/canvas-image-resize/
 Description: Re-sizes images right inside the browser BEFORE uploading them.
-Version: 1.0.1
-Author: Simon Sippert
-Author URI: http://www.sippsolutions.de/
+Version:     1.0.1
+Author:      Simon Sippert
+Author URI:  http://www.sippsolutions.de/
 Text Domain: canvas-image-resize
 Domain Path: /lang
-License: GNU
+License:     GPL3
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
 */
 
 /*
